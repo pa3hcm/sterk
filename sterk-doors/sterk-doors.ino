@@ -1,31 +1,60 @@
 /*
  Project: sterk-doors
+ Source:  http://github.com/pa3hcm/sterk
  Author:  Ernest Neijenhuis <http://pa3hcm.nl>
 */
 
-// Pin labels
-const int P_OVERTURE = 6;
-const int P_STOP = 7;
-const int P_PIR = 8;
-const int P_WINCH_OPEN = 9;
-const int P_WINCH_CLOSE = 10;
-const int P_WINCH_BRAKE = 11;
 
+/////////////////////////////////////////////////////////////////////////
+// Constants
+
+// Pin labels
+const int P_OVERTURE    =  6; // Pin to trigger remote music player
+const int P_STOP        =  7; // Switch pushed when doors fully closed
+const int P_PIR         =  8; // PIR sensor for motion detection
+const int P_WINCH_OPEN  =  9; // Drive winch to open the doors
+const int P_WINCH_CLOSE = 10; // Drive winch to close the doors
+const int P_WINCH_BRAKE = 11; // Activate door brake
+
+// Pir timeout, number of loops (main loop) before closing the doors
+// while there's nobody around anymore
 const long PIR_TIMEOUT = 10000;
 
+
+
+/////////////////////////////////////////////////////////////////////////
+// setup routine
+
 void setup() {
-  pinMode(P_OVERTURE, OUTPUT);
-  pinMode(P_STOP, INPUT_PULLUP);
-  pinMode(P_PIR, INPUT);
-  pinMode(P_WINCH_OPEN, OUTPUT);
-  pinMode(P_WINCH_CLOSE, OUTPUT);
-  pinMode(P_WINCH_BRAKE, OUTPUT);
+  pinMode(P_OVERTURE,    OUTPUT      );
+  pinMode(P_STOP,        INPUT_PULLUP);
+  pinMode(P_PIR,         INPUT       );
+  pinMode(P_WINCH_OPEN,  OUTPUT      );
+  pinMode(P_WINCH_CLOSE, OUTPUT      );
+  pinMode(P_WINCH_BRAKE, OUTPUT      );
   Serial.begin(9600);
 }
 
-int state = 1; // 1=init, 2=waitForOpen, 3=open, 4=waitForClose, 5=close
-boolean doorsAreOpen = 0;
+
+
+/////////////////////////////////////////////////////////////////////////
+// Initialisation of variables
+
+// State, used in main loop
+// 1=init, 2=waitForOpen, 3=open, 4=waitForClose, 5=close
+int state = 1;
+
+// Stores door state, 0=open, 1=closed
+bool doorsAreOpen = 0;
+
+// Countdown counter, used when doors are open while nobody is around
+// anymore
 int pirTimeout = PIR_TIMEOUT;
+
+
+
+/////////////////////////////////////////////////////////////////////////
+// Main loop
 
 void loop() {
   delay(100);  
@@ -99,6 +128,12 @@ void loop() {
 
 }
 
+
+
+/////////////////////////////////////////////////////////////////////////
+// doors_close() function
+// Closes the doors, unless they are closed already
+
 void doors_close() {
   // Ensure the winch is not running
   digitalWrite(P_WINCH_OPEN, LOW);
@@ -117,6 +152,12 @@ void doors_close() {
   digitalWrite(P_WINCH_BRAKE, LOW);
 }
 
+
+
+/////////////////////////////////////////////////////////////////////////
+// doors_open() function
+// Open the doors
+
 void doors_open() {
   // Ensure the doors are fully closed
   //doors_close();
@@ -134,3 +175,5 @@ void doors_open() {
   digitalWrite(P_WINCH_OPEN, LOW);
   digitalWrite(P_WINCH_BRAKE, LOW);
 }
+
+// the end
