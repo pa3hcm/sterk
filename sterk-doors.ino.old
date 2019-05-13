@@ -1,0 +1,78 @@
+/*
+ Project: sterk-doors
+ Author:  Ernest Neijenhuis <http://pa3hcm.nl>
+*/
+
+const int P_STOP = 7;
+const int P_PIR = 8;
+const int P_WINCH_OPEN = 9;
+const int P_WINCH_CLOSE = 10;
+
+void setup() {
+  pinMode(6, OUTPUT);
+  digitalWrite(6, HIGH);
+  pinMode(P_STOP, INPUT_PULLUP);
+  pinMode(P_PIR, INPUT);
+  pinMode(P_WINCH_OPEN, OUTPUT);
+  pinMode(P_WINCH_CLOSE, OUTPUT);
+  doors_close();
+  delay(5000);
+}
+
+
+
+long pirCount = 0;
+boolean doorsAreOpen = 0;
+
+void loop() {
+  if(doorsAreOpen == 1) {
+    if(digitalRead(P_PIR) == HIGH) {
+      pirCount = 100;
+    } else {
+      pirCount--;
+    }
+    if(pirCount < 1) {
+      doors_close();
+      delay(5000);
+      doorsAreOpen = 0;
+      pirCount = 0;
+    }
+  } else {
+    if(digitalRead(P_PIR) == HIGH) {
+      pirCount++;
+    } else {
+      if(pirCount > 0) {
+        pirCount--;
+      }
+    }
+    if(pirCount > 5) {
+      doors_open();
+      delay(5000);
+      doorsAreOpen = 1;
+      pirCount = 100;
+    }
+  }
+}
+
+
+
+void doors_close() {
+  digitalWrite(P_WINCH_OPEN, LOW);
+  digitalWrite(P_WINCH_CLOSE, LOW);
+  while(digitalRead(P_STOP) == HIGH) {
+    digitalWrite(P_WINCH_CLOSE, HIGH);
+    delay(10);
+  }
+  digitalWrite(P_WINCH_CLOSE, LOW);
+}
+
+void doors_open() {
+  digitalWrite(P_WINCH_CLOSE, LOW);
+  digitalWrite(P_WINCH_OPEN, HIGH);
+  delay(1000);
+  if(digitalRead(P_STOP) == HIGH) {
+    digitalWrite(P_WINCH_OPEN, HIGH);
+    delay(3000);
+  }
+  digitalWrite(P_WINCH_OPEN, LOW);
+}
