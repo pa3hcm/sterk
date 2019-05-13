@@ -11,6 +11,8 @@ const int P_WINCH_OPEN = 9;
 const int P_WINCH_CLOSE = 10;
 const int P_WINCH_BRAKE = 11;
 
+const long PIR_TIMEOUT = 10000;
+
 void setup() {
   pinMode(P_OVERTURE, OUTPUT);
   pinMode(P_STOP, INPUT_PULLUP);
@@ -23,6 +25,7 @@ void setup() {
 
 int state = 1; // 1=init, 2=waitForOpen, 3=open, 4=waitForClose, 5=close
 boolean doorsAreOpen = 0;
+int pirTimeout = PIR_TIMEOUT;
 
 void loop() {
   delay(100);  
@@ -59,14 +62,21 @@ void loop() {
         doors_open();
         doorsAreOpen = 1;
         Serial.println("Entertainment in progress...");
+        pirTimeout = PIR_TIMEOUT;
         state = 4;
       }
       break;
 
     // While movement is detected, keep the doors open
     case 4:
-      delay(10000);
-      state = 5;
+      if(digitalRead(P_PIR) == HIGH) {
+        pirTimeout = PIR_TIMEOUT;
+      } else {
+        pirTimeout--;
+      }
+      if(pirTimeout <= 0) {
+        state = 5;
+      }
       break;
 
     // Close the doors (if open)
