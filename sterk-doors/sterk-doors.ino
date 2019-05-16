@@ -18,7 +18,7 @@ const int P_WINCH_BRAKE = 11; // Activate door brake
 
 // Pir timeout, number of loops (main loop) before closing the doors
 // while there's nobody around anymore
-const long PIR_TIMEOUT = 10000;
+const long PIR_TIMEOUT = 1000;
 
 
 
@@ -51,6 +51,11 @@ bool doorsAreOpen = 0;
 // anymore
 int pirTimeout = PIR_TIMEOUT;
 
+// While closed, the doors try to open due to continuous pressure of the
+// springs. So sometimes we have to pull the strings again. This counter
+// relaxes this process.
+int leaking = 0;
+const int LEAKING_LIMIT = 200;
 
 
 /////////////////////////////////////////////////////////////////////////
@@ -77,6 +82,14 @@ void loop() {
       if(digitalRead(P_PIR) == HIGH) {
         state = 3;
       }
+      if(digitalRead(P_STOP) == HIGH) {
+        leaking++;
+      }
+      if(leaking > LEAKING_LIMIT) {
+        Serial.println("Oops... doors about to open spontaneously.");
+        doors_close();
+        leaking = 0;
+      }
       break;
 
     // Open the doors (if not open yet)
@@ -84,12 +97,12 @@ void loop() {
       if(doorsAreOpen == 0) {
         // Send a activation pulse to the music player
         Serial.println("Yep... I saw something, let's open the doors!");
-        digitalWrite(P_OVERTURE, HIGH);
-        delay(100);
-        digitalWrite(P_OVERTURE, LOW);
         // Open the doors
         doors_open();
         doorsAreOpen = 1;
+        digitalWrite(P_OVERTURE, HIGH);
+        delay(100);
+        digitalWrite(P_OVERTURE, LOW);
         Serial.println("Entertainment in progress...");
         pirTimeout = PIR_TIMEOUT;
         state = 4;
@@ -100,8 +113,14 @@ void loop() {
     case 4:
       if(digitalRead(P_PIR) == HIGH) {
         pirTimeout = PIR_TIMEOUT;
+        Serial.print(".");
       } else {
         pirTimeout--;
+      }
+      if(pirTimeout == (PIR_TIMEOUT/2)) {
+        digitalWrite(P_OVERTURE, HIGH);
+        delay(100);
+        digitalWrite(P_OVERTURE, LOW);
       }
       if(pirTimeout <= 0) {
         state = 5;
@@ -135,21 +154,26 @@ void loop() {
 // Closes the doors, unless they are closed already
 
 void doors_close() {
+  int close_timeout = 2000;
   // Ensure the winch is not running
   digitalWrite(P_WINCH_OPEN, LOW);
   digitalWrite(P_WINCH_CLOSE, LOW);
   // Only start the winch when door switch is not pressed
   if(digitalRead(P_STOP) == HIGH) {
     // Run the winch until the door switch is pressed
-    while(digitalRead(P_STOP) == HIGH) {
+    while((digitalRead(P_STOP) == HIGH) and (close_timeout > 0)) {
       digitalWrite(P_WINCH_BRAKE, HIGH);
       digitalWrite(P_WINCH_CLOSE, HIGH);
       delay(10);
+      close_timeout--;
     }
   }
   // Stop the winch
   digitalWrite(P_WINCH_CLOSE, LOW);
   digitalWrite(P_WINCH_BRAKE, LOW);
+  // In case of failure...
+  if(close_timeout <= 0) {
+  }
 }
 
 
@@ -169,7 +193,7 @@ void doors_open() {
   // Switch should not be pressed after a second
   if(digitalRead(P_STOP) == HIGH) {
     // Run the winch for a while, until the doors are opened far enough
-    delay(8000);
+    delay(8500);
   }
   // Stop the winch
   digitalWrite(P_WINCH_OPEN, LOW);
